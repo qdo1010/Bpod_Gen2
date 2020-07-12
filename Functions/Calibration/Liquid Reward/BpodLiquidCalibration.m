@@ -42,7 +42,9 @@ switch lower(op)
         
         % Setup calibration
         BpodSystem.PluginObjects.LiquidCal.PendingMeasurements = cell(1,8);
-        CalibrationFilePath = fullfile(BpodSystem.Path.LocalDir, 'Calibration Files', 'LiquidCalibration.mat');
+        match = ['\','/'];
+         BpodSystem.Status.SerialPortName
+        CalibrationFilePath = fullfile(BpodSystem.Path.LocalDir, 'Calibration Files',  strcat(strrep(BpodSystem.Status.SerialPortName,'/',''),'LiquidCalibration.mat'));
         load(CalibrationFilePath);
         BpodSystem.PluginObjects.LiquidCal.CalData = LiquidCal;
         BpodSystem.PluginObjects.LiquidCal.CalibrationTargetRange = [2 10];
@@ -321,7 +323,9 @@ if isPendingMeasurement == 0
         BpodSystem.PluginObjects.LiquidCal.CalData(CurrentValve).Coeffs = [];
     end
     % Save file
-    SavePath = fullfile(BpodSystem.Path.LocalDir, 'Calibration Files', 'LiquidCalibration.mat');
+    match = ['\','/'];
+    BpodSystem.Status.SerialPortName
+    SavePath = fullfile(BpodSystem.Path.LocalDir, 'Calibration Files',  strcat(strrep(BpodSystem.Status.SerialPortName,'/',''),'LiquidCalibration.mat'));
     LiquidCal = BpodSystem.PluginObjects.LiquidCal.CalData;
     LiquidCal(1).LastDateModified = now;
     save(SavePath, 'LiquidCal');
@@ -695,7 +699,9 @@ if AllValid == 1
     if exist(TestSavePath) ~= 7
         mkdir(TestSavePath);
     end
-    SavePath = fullfile(BpodSystem.Path.LocalDir, 'Calibration Files', 'LiquidCalibration.mat');
+    match = ['\','/'];
+    BpodSystem.Status.SerialPortName
+    SavePath = fullfile(BpodSystem.Path.LocalDir, 'Calibration Files', strcat(strrep(BpodSystem.Status.SerialPortName,'/',''),'LiquidCalibration.mat'));
     LiquidCal = BpodSystem.PluginObjects.LiquidCal.CalData;
     LiquidCal(1).LastDateModified = now;
     save(SavePath, 'LiquidCal');
