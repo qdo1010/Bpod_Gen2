@@ -2,7 +2,7 @@
 ----------------------------------------------------------------------------
 
 This file is part of the Sanworks Bpod repository
-Copyright (C) 2022 Sanworks LLC, Rochester, New York, USA
+Copyright (C) 2018 Sanworks LLC, Stony Brook, New York, USA
 
 ----------------------------------------------------------------------------
 
@@ -39,8 +39,14 @@ BpodPath = fileparts(which('Bpod'));
 addpath(genpath(fullfile(BpodPath, 'Functions')));
 
 % adding a third argument to show the GUI: 1 = show GUI (default), 0 = don't show GUI
+
+% adding a fourth argument for Bpod name (string)
 if nargin > 2
-    BpodSystem = BpodObject(varargin{3});
+    if nargin > 3
+        BpodSystem = BpodObject(varargin{3}, varargin{4});
+    else
+        BpodSystem = BpodObject(varargin{3});
+    end
 else
     BpodSystem = BpodObject;
 end
@@ -53,20 +59,23 @@ if nargin > 0
     if strcmp(varargin{1}, 'EMU')
         EmulatorDialog;
     else
-        if nargin > 1
-            ForceJava = varargin{2};
-            BpodSystem.Connect2BpodSM(varargin{1}, ForceJava);
-        else
-            BpodSystem.Connect2BpodSM(varargin{1});
-        end
-        BpodSetup;
+        %try
+            if nargin > 1
+                ForceJava = varargin{2};
+                BpodSystem.Connect2BpodSM(varargin{1}, ForceJava);
+            else
+                BpodSystem.Connect2BpodSM(varargin{1});
+            end
+            BpodSetup;
+        %catch
+        %    EmulatorDialog;
+        %end
     end
 else
     try
         BpodSystem.Connect2BpodSM('AUTO');
         BpodSetup;
-    catch ME
-        BpodSystem.GUIData.LaunchError = ME;
+    catch
         if isfield(BpodSystem.GUIData, 'OldFirmwareFlag')
             close(BpodSystem.GUIHandles.SplashFig);
             delete(BpodSystem)
@@ -111,12 +120,8 @@ end
 
 function CloseBpodHWNotFound(hObject,event)
 global BpodSystem
+lasterr
 close(BpodSystem.GUIHandles.LaunchEmuFig);
 close(BpodSystem.GUIHandles.SplashFig);
-disp('Error: Bpod State Machine not found.')
-if isfield(BpodSystem.GUIData, 'LaunchError')
-    rethrow(BpodSystem.GUIData.LaunchError)
-else
-    lasterr
-end
 delete(BpodSystem)
+disp('Error: Bpod device not found.')

@@ -60,7 +60,7 @@ switch op
             TrialTypeString{i} = TrialGroupNames{i-1};
         end
         TrialTypeString{i+1} = '%Incomplete';
-        legend(TrialTypeString,'Location','northoutside','Orientation','horizontal');
+        legend(TrialTypeString,'Location','northoutside','Orientation','horizontal','boxoff');
     case 'update'
         TrialTypes = varargin{1};
         Outcomes = varargin{2};
