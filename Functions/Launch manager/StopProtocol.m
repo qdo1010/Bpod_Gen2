@@ -6,16 +6,17 @@ Copyright (C) 2017 Sanworks LLC, Stony Brook, New York, USA
 
 ----------------------------------------------------------------------------
 
-This program is free software:you can redistribute it and / or modify
+This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, version 3.
 
-This program is distributed WITHOUT ANY WARRANTY and without even the
+This program is distributed  WITHOUT ANY WARRANTY and without even the
+
 implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 See the GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program. If not, see < http: // www.gnu.org / licenses /> .
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
 %}
 
 % Usage:
@@ -47,41 +48,38 @@ function StopProtocol(varargin)
     BpodSystem.Path.Settings = '';
     BpodSystem.Status.Live = 0;
 
+
     if BpodSystem.EmulatorMode == 0
         BpodSystem.SerialPort.write('X', 'uint8');
         pause(.1);
         nBytes = BpodSystem.SerialPort.bytesAvailable;
-
         if nBytes > 0
             BpodSystem.SerialPort.read(nBytes, 'uint8');
         end
-
         if isfield(BpodSystem.PluginSerialPorts, 'TeensySoundServer')
             TeensySoundServer('end');
-        end
-
+        end   
     end
+
 
     BpodSystem.Status.InStateMatrix = 0;
     % Shut down protocol and plugin figures (should be made more general)
     try
         Figs = fields(BpodSystem.ProtocolFigures);
         nFigs = length(Figs);
-
         for x = 1:nFigs
-
             try
                 close(eval(['BpodSystem.ProtocolFigures.' Figs{x}]));
             catch
-
+                
             end
-
         end
 
         try
             close(BpodNotebook)
         catch
         end
+
 
     catch
     end

@@ -49,11 +49,18 @@ function EndBpod
                 close(BpodSystem.GUIHandles.ConfigureBonsaiFig)
             catch
             end
+        end
+        pause(.1);
 
-            % close calibration window if it's open
-            try
-                delete(BpodSystem.GUIHandles.LiquidCalibrator.MainFig)
-            catch
+        if isfield(BpodSystem.GUIHandles, 'MainFig')
+            delete(BpodSystem.GUIHandles.MainFig);
+        end
+        
+        if BpodSystem.EmulatorMode == 0
+            if isfield(BpodSystem.PluginSerialPorts, 'TeensySoundServer')
+                TeensySoundServer('end');
+
+
             end
             
             clear global BpodSystem

@@ -1,6 +1,22 @@
 # Bpod 2nd Generation Code Repository
 
 This repository includes:
+* MATLAB experiment control software for Bpod
+* Example settings and calibration files
+* Example protocols
+* Example module firmware
+* A firmware loading tool
+
+## Setup ##
+
+* Add /Bpod_Gen2/ to the MATLAB path
+* Connect a Bpod State Machine to your PC
+* Run Bpod() at the MATLAB command prompt
+* See the wiki (above) for more info
+
+## Contributions ##
+* Please note the guidelines given [here](/CONTRIBUTING.md).
+=======
 -MATLAB software for Bpod.
 -Example settings files
 -Example module firmware
@@ -12,6 +28,8 @@ https://sites.google.com/site/bpoddocumentation/installing-bpod
 
 #### Starting Bpod
 
+As before, just open MATLAB and run:
+=======
 Two new parameters have been added to Bpod objects. The third argument is a logical to show the GUI (1) or not (0). The fourth argument is a name you can pass to the Bpod. If you don't pass a name, Bpod runs as normal. If you do use a name, the name will be displayed in the title of the console and liquid calibration windows. Also, the liquid calibration file will be changed from 'LiquidCalibration.mat' to 'LiquidCalibration_<Name>.mat'
   
 To begin, just open MATLAB and run:
@@ -19,6 +37,7 @@ To begin, just open MATLAB and run:
 SerialPort = 'EMU'; % for emulator
 ForceJava = 0;
 ShowGUI = 0; %0 to not show, 1 to run as normal
+
 Name = 'MyBpod';
 Bpod(SerialPort, ForceJava, ShowGUI, Name);
 ```
@@ -41,3 +60,7 @@ BpodSystem.SwitchGUI();
 The first time `BpodSystem.SwitchGUI();` is run, the console will be initialized (it will take just a few seconds). Each subsequent call will hide and show the GUI quickly.
 
 TODO: Handle the keyboard interrupt more gracefully. Is this possible in MATLAB?
+## Companion Repositories ##
+* [Bpod Firmware](https://sanworks.github.io/Bpod_Wiki/install-and-update/firmware-repo-list/)<br>
+* [Bpod Hardware & CAD](https://github.com/sanworks/Bpod-CAD)
+=======
