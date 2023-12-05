@@ -702,9 +702,11 @@ BpodSystem.ProtocolSettings = eval(['SettingStruct.' FieldName]);
 BpodSystem.Data = struct;
 ProtocolFolderPath = fullfile(BpodSystem.Path.ProtocolFolder,ProtocolName);
 ProtocolPath = fullfile(BpodSystem.Path.ProtocolFolder,ProtocolName,[ProtocolName '.m']);
+addpath(ProtocolPath);
 
-addpath(ProtocolFolderPath);
-set(BpodSystem.GUIHandles.RunButton, 'cdata', BpodSystem.GUIData.PauseButton, 'TooltipString', 'Press to pause session');
+if isfield(BpodSystem.GUIHandles, 'MainFig')
+    set(BpodSystem.GUIHandles.RunButton, 'cdata', BpodSystem.GUIData.PauseButton, 'TooltipString', 'Press to pause session');
+end
 
 IsOnline = BpodSystem.check4Internet();
 if (IsOnline == 1) && (BpodSystem.SystemSettings.PhoneHome == 1)
@@ -715,17 +717,24 @@ BpodSystem.ProtocolStartTime = now*100000;
 BpodSystem.resetSessionClock();
 close(BpodSystem.GUIHandles.LaunchManagerFig);
 
-disp(' ');
-disp(['Starting ' ProtocolName]);
-set(BpodSystem.GUIHandles.CurrentStateDisplay, 'String', '---');
-set(BpodSystem.GUIHandles.PreviousStateDisplay, 'String', '---');
-set(BpodSystem.GUIHandles.LastEventDisplay, 'String', '---');
-set(BpodSystem.GUIHandles.TimeDisplay, 'String', '0:00:00');
-if sum(BpodSystem.InputsEnabled(BpodSystem.HW.Inputs == 'P')) == 0
-    warning('All Bpod behavior ports are currently disabled. If your protocol requires behavior ports, enable them from the settings menu.')
-end
-run(ProtocolPath);
+try
+    disp(' ');
+    disp(['Starting ' ProtocolName]);
+    run(ProtocolPath);
+catch e
+    if strcmp(e.message, 'Reference to non-existent field ''States''.') || strcmp(e.message, 'Unrecognized field name "States".')
+        fprintf("Protocol ended manually.\n");
+    else
+        fprintf("An error occured while running the protocol: \n");
+        
+        for i = 1:length(e.stack)
+            fprintf("Function = %s on line = %d\n", e.stack(i).name, e.stack(i).line);
+        end
 
+        fprintf('%s; %s\n', e.identifier, e.message);
+        fprintf("")
+    end
+end
 
 function OutputString = Spaces2Underscores(InputString)
 SpaceIndexes = InputString == ' ';

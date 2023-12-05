@@ -70,13 +70,7 @@ classdef BpodObject < handle
 
     methods
 
-        function obj = BpodObject %Constructor
-            % Check path for duplicate Bpod installations
-            MatlabPath = path;
-            nInstallations = length([strfind(MatlabPath, 'Bpod_Gen2;') strfind(MatlabPath, 'Bpod_Gen2-develop;')]);
-            if nInstallations > 1
-                error(['Duplicate Bpod_Gen2 folders found in the MATLAB path. ' char(10) 'Please remove duplicates of Bpod_Gen2 and any duplicate subfolders before running Bpod.'])
-            end
+        function obj = BpodObject(varargin) %Constructor
             % Add Bpod code to MATLAB path
             BpodPath = fileparts(which('Bpod'));
             addpath(genpath(fullfile(BpodPath, 'Assets')));
@@ -107,10 +101,22 @@ classdef BpodObject < handle
                 obj.ShowGUI = 1;
             end
 
+            if nargin > 1
+                obj.Name = varargin{2};
+            else
+                obj.Name = '';
+            end
+
             obj.LiveTimestamps = 0;
+            obj.SplashData.BG = SplashBGData;
+            obj.SplashData.Messages = SplashMessageData;
+            obj.GUIHandles.SplashFig = figure('Position', [400 300 485 300], 'name', 'Bpod', 'numbertitle', 'off', 'MenuBar', 'none', 'Resize', 'off');
 
-            obj.SplashData = SplashData;
+            if ~obj.ShowGUI %check show gui flag before showing splash screen
+                set(obj.GUIHandles.SplashFig, 'visible', 'off');
+            end
 
+            obj.BonsaiSocket.Connected = 0;
             obj.Status.BpodStartTime = now;
             obj.Status = struct;
             obj.Status.LastTimestamp = 0;
