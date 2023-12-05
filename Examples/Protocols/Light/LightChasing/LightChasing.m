@@ -49,8 +49,8 @@ for currentTrial = 1:MaxTrials
         'Timer', 5,...
         'StateChangeConditions', {'Tup', 'exit'},...
         'OutputActions', {}); 
-    SendStateMachine(sma);
-    RawEvents = RunStateMachine;
+    SendStateMatrix(sma);
+    RawEvents = RunStateMatrix;
     if ~isempty(fieldnames(RawEvents)) % If trial data was returned
         BpodSystem.Data = AddTrialEvents(BpodSystem.Data,RawEvents); % Computes trial events from raw data
         BpodSystem.Data = BpodNotebook('sync', BpodSystem.Data); % Sync with Bpod notebook plugin
