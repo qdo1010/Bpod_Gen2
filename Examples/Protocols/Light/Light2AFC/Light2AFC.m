@@ -2,7 +2,7 @@
 ----------------------------------------------------------------------------
 
 This file is part of the Sanworks Bpod repository
-Copyright (C) 2016 Sanworks LLC, Sound Beach, New York, USA
+Copyright (C) 2022 Sanworks LLC, Rochester, New York, USA
 
 ----------------------------------------------------------------------------
 
@@ -67,7 +67,7 @@ for currentTrial = 1:MaxTrials
         case 2
             LeftPokeAction = 'Punish'; RightPokeAction = 'RightRewardDelay'; StimulusOutput = {'PWM3', 255};
     end
-    sma = NewStateMatrix(); % Assemble state matrix
+    sma = NewStateMachine(); % Initialize new state machine description
     sma = AddState(sma, 'Name', 'WaitForPoke', ...
         'Timer', 0,...
         'StateChangeConditions', {'Port2In', 'CueDelay'},...
@@ -116,8 +116,8 @@ for currentTrial = 1:MaxTrials
         'Timer', 0,...
         'StateChangeConditions', {'Tup', 'exit'},...
         'OutputActions', {});
-    SendStateMatrix(sma);
-    RawEvents = RunStateMatrix;
+    SendStateMachine(sma);
+    RawEvents = RunStateMachine;
     if ~isempty(fieldnames(RawEvents)) % If trial data was returned
         BpodSystem.Data = AddTrialEvents(BpodSystem.Data,RawEvents); % Computes trial events from raw data
         BpodSystem.Data = BpodNotebook('sync', BpodSystem.Data); % Sync with Bpod notebook plugin
