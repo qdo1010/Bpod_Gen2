@@ -34,6 +34,7 @@ switch Op
         BpodSystem.Emulator.GlobalTimersTriggered = zeros(1,BpodSystem.HW.n.GlobalTimers);
         BpodSystem.Emulator.GlobalTimersActive = zeros(1,BpodSystem.HW.n.GlobalTimers);
         BpodSystem.Emulator.GlobalCounterCounts = zeros(1,BpodSystem.HW.n.GlobalCounters);
+        BpodSystem.Emulator.GlobalCounterHandled = zeros(1,BpodSystem.HW.n.GlobalCounters);
         BpodSystem.Emulator.ConditionChannels = zeros(1,BpodSystem.HW.n.Conditions);
         BpodSystem.Emulator.ConditionValues = zeros(1,BpodSystem.HW.n.Conditions);
         BpodSystem.Emulator.Timestamps = zeros(1,10000);
@@ -44,18 +45,23 @@ switch Op
         BpodSystem.Emulator.SoftCode = BpodSystem.StateMatrix.OutputMatrix(1,BpodSystem.HardwareState.OutputType == 'X');
         
         % Continue updating HERE
-        
+
         % Set global timer end-time (if triggered in first state)
-        ThisGlobalTimer = BpodSystem.StateMatrix.OutputMatrix(BpodSystem.Emulator.CurrentState,BpodSystem.HW.Pos.GlobalTimerTrig);
-        if ThisGlobalTimer ~= 0
-            if BpodSystem.StateMatrix.GlobalTimers.OnsetDelay(ThisGlobalTimer) == 0
-                BpodSystem.Emulator.GlobalTimerEnd(ThisGlobalTimer) = BpodSystem.Emulator.CurrentTime + BpodSystem.StateMatrix.GlobalTimers.Duration(ThisGlobalTimer);
-                BpodSystem.Emulator.GlobalTimersActive(ThisGlobalTimer) = 1;
-                setGlobalTimerChannel(ThisGlobalTimer, 1);
-            else
-                BpodSystem.Emulator.GlobalTimerStart(ThisGlobalTimer) = BpodSystem.Emulator.CurrentTime + BpodSystem.StateMatrix.GlobalTimers.OnsetDelay(ThisGlobalTimer);
-                BpodSystem.Emulator.GlobalTimerEnd(ThisGlobalTimer) = BpodSystem.Emulator.GlobalTimerStart(ThisGlobalTimer) + BpodSystem.StateMatrix.GlobalTimers.Duration(ThisGlobalTimer);
-                BpodSystem.Emulator.GlobalTimersTriggered(ThisGlobalTimer) = 1;
+        GlobalTimerTrigByte = BpodSystem.StateMatrix.OutputMatrix(BpodSystem.Emulator.CurrentState,BpodSystem.HW.Pos.GlobalTimerTrig);
+        if GlobalTimerTrigByte ~= 0
+            timersToTrigger = dec2bin(GlobalTimerTrigByte) == '1';
+            AllGlobalTimers = find(timersToTrigger(end:-1:1));
+            for z = 1:length(AllGlobalTimers)
+                ThisGlobalTimer = AllGlobalTimers(z);
+                if BpodSystem.StateMatrix.GlobalTimers.OnsetDelay(ThisGlobalTimer) == 0
+                    BpodSystem.Emulator.GlobalTimerEnd(ThisGlobalTimer) = BpodSystem.Emulator.CurrentTime + BpodSystem.StateMatrix.GlobalTimers.Duration(ThisGlobalTimer);
+                    BpodSystem.Emulator.GlobalTimersActive(ThisGlobalTimer) = 1;
+                    setGlobalTimerChannel(ThisGlobalTimer, 1);
+                else
+                    BpodSystem.Emulator.GlobalTimerStart(ThisGlobalTimer) = BpodSystem.Emulator.CurrentTime + BpodSystem.StateMatrix.GlobalTimers.OnsetDelay(ThisGlobalTimer);
+                    BpodSystem.Emulator.GlobalTimerEnd(ThisGlobalTimer) = BpodSystem.Emulator.GlobalTimerStart(ThisGlobalTimer) + BpodSystem.StateMatrix.GlobalTimers.Duration(ThisGlobalTimer);
+                    BpodSystem.Emulator.GlobalTimersTriggered(ThisGlobalTimer) = 1;
+                end
             end
         end
     case 'loop'
@@ -68,30 +74,30 @@ switch Op
                 VirtualCurrentEvents(BpodSystem.Emulator.nCurrentEvents) = ManualOverrideEvent;
             end
             % Evaluate condition transitions
-            for x = 1:5
-                ConditionEvent = 0;
-                if BpodSystem.Emulator.ConditionChannels(x) > 0
-                    ConditionValue = BpodSystem.Emulator.ConditionValues(x);
-                    if ManualOverrideEvent < 9
-                        if BpodSystem.HardwareState.PortSensors(BpodSystem.Emulator.ConditionChannels(x)) == ConditionValue
-                            ConditionEvent = ConditionOffset+x;
-                        end
-                    elseif ManualOverrideEvent < 11
-                        if BpodSystem.HardwareState.BNCInputs(BpodSystem.Emulator.ConditionChannels(x)-8) == ConditionValue
-                            ConditionEvent = ConditionOffset+x;
-                        end
-                    elseif ManualOverrideEvent < 15
-                        if BpodSystem.HardwareState.PortSensors(BpodSystem.Emulator.ConditionChannels(x)-10) == ConditionValue
-                            ConditionEvent = ConditionOffset+x;
-                        end
-                    end
-                end
-                if ConditionEvent > 0
-                    VirtualCurrentEvents(BpodSystem.Emulator.nCurrentEvents+1) = ManualOverrideEvent;
-                    VirtualCurrentEvents(BpodSystem.Emulator.nCurrentEvents) = ConditionEvent;
-                    nCurrentEvents = nCurrentEvents + 1;
-                end
-            end
+%             for x = 1:5
+%                 ConditionEvent = 0;
+%                 if BpodSystem.Emulator.ConditionChannels(x) > 0
+%                     ConditionValue = BpodSystem.Emulator.ConditionValues(x);
+%                     if ManualOverrideEvent < 9
+%                         if BpodSystem.HardwareState.PortSensors(BpodSystem.Emulator.ConditionChannels(x)) == ConditionValue
+%                             ConditionEvent = ConditionOffset+x;
+%                         end
+%                     elseif ManualOverrideEvent < 11
+%                         if BpodSystem.HardwareState.BNCInputs(BpodSystem.Emulator.ConditionChannels(x)-8) == ConditionValue
+%                             ConditionEvent = ConditionOffset+x;
+%                         end
+%                     elseif ManualOverrideEvent < 15
+%                         if BpodSystem.HardwareState.PortSensors(BpodSystem.Emulator.ConditionChannels(x)-10) == ConditionValue
+%                             ConditionEvent = ConditionOffset+x;
+%                         end
+%                     end
+%                 end
+%                 if ConditionEvent > 0
+%                     VirtualCurrentEvents(BpodSystem.Emulator.nCurrentEvents+1) = ManualOverrideEvent;
+%                     VirtualCurrentEvents(BpodSystem.Emulator.nCurrentEvents) = ConditionEvent;
+%                     nCurrentEvents = nCurrentEvents + 1;
+%                 end
+%             end
             % Evaluate global timer transitions
             for x = 1:BpodSystem.HW.n.GlobalTimers
                 if BpodSystem.Emulator.GlobalTimersActive(x) == 1
@@ -117,10 +123,11 @@ switch Op
             end
             % Evaluate global counter transitions
             for x = 1:BpodSystem.HW.n.GlobalCounters
-                if BpodSystem.StateMatrix.GlobalCounterEvents(x) ~= 255
+                if BpodSystem.StateMatrix.GlobalCounterEvents(x) ~= 255 && BpodSystem.Emulator.GlobalCounterHandled(x) == 0
                     if BpodSystem.Emulator.GlobalCounterCounts(x) == BpodSystem.StateMatrix.GlobalCounterThresholds(x)
                         BpodSystem.Emulator.nCurrentEvents = BpodSystem.Emulator.nCurrentEvents + 1;
                         VirtualCurrentEvents(BpodSystem.Emulator.nCurrentEvents) = GlobalCounterOffset+x;
+                        BpodSystem.Emulator.GlobalCounterHandled(x) = 1;
                     end
                     if VirtualCurrentEvents(1) == BpodSystem.StateMatrix.GlobalCounterEvents(x)
                         BpodSystem.Emulator.GlobalCounterCounts(x) = BpodSystem.Emulator.GlobalCounterCounts(x) + 1;
@@ -133,12 +140,10 @@ switch Op
                     TargetState = BpodSystem.StateMatrix.ConditionMatrix(BpodSystem.Emulator.CurrentState, x);
                     if TargetState ~= BpodSystem.Emulator.CurrentState
                         ThisChannel = BpodSystem.StateMatrix.ConditionChannels(x);
-                        if ThisChannel < BpodSystem.HW.Pos.Input_Port
-                            HWState = BpodSystem.HardwareState.PortSensors(ThisChannel);
-                        elseif ThisChannel < 11
-                            HWState = BpodSystem.HardwareState.BNCInputs(ThisChannel-9);
-                        elseif ThisChannel < 13
-                            HWState = BpodSystem.HardwareState.WireInputs(ThisChannel-11);
+                        if ThisChannel <= BpodSystem.HW.n.Inputs
+                            HWState = BpodSystem.HardwareState.InputState(ThisChannel);
+                        else
+                            HWState = BpodSystem.Emulator.GlobalTimersActive(ThisChannel-BpodSystem.HW.n.Inputs);
                         end
                         if HWState == BpodSystem.StateMatrix.ConditionValues(x)
                             BpodSystem.Emulator.nCurrentEvents = BpodSystem.Emulator.nCurrentEvents + 1;

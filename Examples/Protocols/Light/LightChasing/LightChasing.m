@@ -28,7 +28,7 @@ for currentTrial = 1:MaxTrials
         case 2
             RightAction = 'Reward'; LeftAction = 'Punish'; StimulusOutputActions = {'LED', 3}; RewardOutputActions = {'Valve', 3}; ValveTime = R(2);
     end
-    sma = NewStateMatrix(); % Assemble state matrix
+    sma = NewStateMachine(); % Initialize new state machine description
     sma = AddState(sma, 'Name', 'WaitForPoke', ...
         'Timer', 0,...
         'StateChangeConditions', {'Port2In', 'DeliverStimulus'},...
@@ -49,8 +49,8 @@ for currentTrial = 1:MaxTrials
         'Timer', 5,...
         'StateChangeConditions', {'Tup', 'exit'},...
         'OutputActions', {}); 
-    SendStateMatrix(sma);
-    RawEvents = RunStateMatrix;
+    SendStateMachine(sma);
+    RawEvents = RunStateMachine;
     if ~isempty(fieldnames(RawEvents)) % If trial data was returned
         BpodSystem.Data = AddTrialEvents(BpodSystem.Data,RawEvents); % Computes trial events from raw data
         BpodSystem.Data = BpodNotebook('sync', BpodSystem.Data); % Sync with Bpod notebook plugin

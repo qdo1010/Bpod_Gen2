@@ -2,7 +2,7 @@
 ----------------------------------------------------------------------------
 
 This file is part of the Sanworks Bpod repository
-Copyright (C) 2017 Sanworks LLC, Stony Brook, New York, USA
+Copyright (C) 2022 Sanworks LLC, Rochester, New York, USA
 
 ----------------------------------------------------------------------------
 
@@ -75,6 +75,7 @@ switch Opstring
             if ~exist(DataPath)
                 error(['Error starting protocol: Test subject "' subjectName '" must be added first, from the launch manager.'])
             end
+
             %Make standard folders for this protocol.  This will fail silently if the folders exist
             mkdir(DataPath, protocolName);
             mkdir(fullfile(DataPath,protocolName,'Session Data'))
@@ -97,7 +98,22 @@ switch Opstring
             if ~exist(SettingsFileName)
                 error(['Error: Settings file: ' settingsName '.mat does not exist for test subject: ' subjectName ' in protocol: ' protocolName '.'])
             end
+            
+            % On Bpod r2+, if FlexIO channels are configured as analog, setup data file
+            nAnalogChannels = sum(BpodSystem.HW.FlexIO_ChannelTypes == 2);
+            if nAnalogChannels > 0
+                AnalogFilename = [subjectName '_' protocolName '_' DateInfo '_ANLG.dat'];
+                if BpodSystem.Status.RecordAnalog == 1
+                    BpodSystem.AnalogDataFile = fopen(AnalogFilename,'w');
+                    if BpodSystem.AnalogDataFile == -1
+                        error(['Error: Could not open the analog data file: ' AnalogFilename])
+                    end
+                end
+                BpodSystem.Status.nAnalogSamples = 0;
+            end
+            
             BpodSystem.Status.Live = 1;
+            BpodSystem.Status.LastEvent = 0;
             BpodSystem.GUIData.ProtocolName = protocolName;
             BpodSystem.GUIData.SubjectName = subjectName;
             BpodSystem.GUIData.SettingsFileName = SettingsFileName;
@@ -110,6 +126,27 @@ switch Opstring
             FieldName = F{1};
             BpodSystem.ProtocolSettings = eval(['SettingStruct.' FieldName]);
             BpodSystem.Data = struct;
+            if BpodSystem.MachineType > 3
+                if nAnalogChannels > 0
+                    BpodSystem.Data.Analog = struct;
+                    BpodSystem.Data.Analog.info = struct;
+                    BpodSystem.Data.Analog.FileName = AnalogFilename;
+                    BpodSystem.Data.Analog.nChannels = nAnalogChannels;
+                    BpodSystem.Data.Analog.channelNumbers = find(BpodSystem.HW.FlexIO_ChannelTypes == 2);
+                    BpodSystem.Data.Analog.SamplingRate = BpodSystem.HW.FlexIO_SamplingRate;
+                    BpodSystem.Data.Analog.nSamples = 0;
+                    % Add human-readable info about data fields to 'info struct
+                    BpodSystem.Data.Analog.info.FileName = 'Complete path and filename of the binary file to which the raw data was logged';
+                    BpodSystem.Data.Analog.info.nChannels = 'The number of Flex I/O channels configured as analog input';
+                    BpodSystem.Data.Analog.info.channelNumbers = 'The indexes of Flex I/O channels configured as analog input';
+                    BpodSystem.Data.Analog.info.SamplingRate = 'The sampling rate of the analog data. Units = Hz';
+                    BpodSystem.Data.Analog.info.nSamples = 'The total number of analog samples captured during the behavior session';
+                    BpodSystem.Data.Analog.info.Samples = 'Analog measurements captured. Rows are separate analog input channels. Units = Volts';
+                    BpodSystem.Data.Analog.info.Timestamps = 'Time of each sample (computed from sample index and sampling rate)';
+                    BpodSystem.Data.Analog.info.TrialNumber = 'Experimental trial during which each analog sample was captured';
+                    BpodSystem.Data.Analog.info.TrialData = 'A cell array of Samples. Each cell contains samples captured during a single trial.';
+                end
+            end
             addpath(ProtocolRunFile);
 
             if isfield(BpodSystem.GUIHandles, 'MainFig')
@@ -120,7 +157,11 @@ switch Opstring
             if (IsOnline == 1) && (BpodSystem.SystemSettings.PhoneHome == 1)
                 %BpodSystem.BpodPhoneHome(1); % Disabled until server migration. -JS July 2018
             end
+            if BpodSystem.Status.AnalogViewer
+                set(BpodSystem.GUIHandles.RecordButton, 'Enable', 'off')
+            end
             BpodSystem.Status.BeingUsed = 1;
+            BpodSystem.Status.SessionStartFlag = 1;
             BpodSystem.ProtocolStartTime = now*100000;
 
             if BpodSystem.ShowGUI && isfield(BpodSystem.GUIHandles, 'MainFig')
@@ -138,6 +179,13 @@ switch Opstring
                 end
             end
 
+            set(BpodSystem.GUIHandles.CurrentStateDisplay, 'String', '---');
+            set(BpodSystem.GUIHandles.PreviousStateDisplay, 'String', '---');
+            set(BpodSystem.GUIHandles.LastEventDisplay, 'String', '---');
+            set(BpodSystem.GUIHandles.TimeDisplay, 'String', '0:00:00');
+            
+            %figure(BpodSystem.GUIHandles.MainFig);
+            %run(ProtocolRunFile);
         end
     case 'StartPause'
         if BpodSystem.Status.BeingUsed == 0
@@ -158,11 +206,67 @@ switch Opstring
                 disp('Session resumed.')
                 BpodSystem.Status.Pause = 0;
 
-                if isfield(BposSystem.GUIHandles, 'MainFig')
-                    set(BpodSystem.GUIHandles.RunButton, 'cdata', BpodSystem.GUIData.PauseButton, 'TooltipString', 'Press to pause session');
+                set(BpodSystem.GUIHandles.RunButton, 'cdata', BpodSystem.GUIData.PauseButton, 'TooltipString', 'Press to pause session');
+            end
+        end
+    case 'Stop'
+        if ~isempty(BpodSystem.Status.CurrentProtocolName)
+            disp(' ')
+            disp([BpodSystem.Status.CurrentProtocolName ' ended'])
+        end
+        warning off % Suppress warning, in case protocol folder has already been removed
+        rmpath(fullfile(BpodSystem.Path.ProtocolFolder, BpodSystem.Status.CurrentProtocolName));
+        warning on
+        BpodSystem.Status.BeingUsed = 0;
+        BpodSystem.Status.CurrentProtocolName = '';
+        BpodSystem.Path.Settings = '';
+        BpodSystem.Status.Live = 0;
+        if BpodSystem.EmulatorMode == 0
+            if BpodSystem.MachineType > 3
+                stop(BpodSystem.Timers.AnalogTimer);
+                try
+                fclose(BpodSystem.AnalogDataFile);
+                catch
+                end
+            end
+            BpodSystem.SerialPort.write('X', 'uint8');
+            pause(.1);
+            BpodSystem.SerialPort.flush;
+            if BpodSystem.MachineType > 3
+                BpodSystem.AnalogSerialPort.flush;
+            end
+            if isfield(BpodSystem.PluginSerialPorts, 'TeensySoundServer')
+                TeensySoundServer('end');
+            end   
+        end
+        BpodSystem.Status.RecordAnalog = 1;
+        BpodSystem.Status.InStateMatrix = 0;
+        % Shut down protocol and plugin figures (should be made more general)
+        try
+            Figs = fields(BpodSystem.ProtocolFigures);
+            nFigs = length(Figs);
+            for x = 1:nFigs
+                try
+                    close(eval(['BpodSystem.ProtocolFigures.' Figs{x}]));
+                catch
+                    
                 end
 
             end
+
+            try
+                close(BpodNotebook)
+            catch
+            end
+            try
+                BpodSystem.analogViewer('end', []);
+            catch
+            end
+        catch
+        end
+        set(BpodSystem.GUIHandles.RunButton, 'cdata', BpodSystem.GUIData.GoButton, 'TooltipString', 'Launch behavior session');
+        if BpodSystem.Status.Pause == 1
+            BpodSystem.Status.Pause = 0;
         end
     case 'Stop'
 
